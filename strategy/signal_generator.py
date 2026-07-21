@@ -14,7 +14,7 @@ The regime detector determines which strategies are active per scan cycle.
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_output
 
 logger = get_logger("signal_generator")
 
@@ -205,8 +205,10 @@ def generate_signals(
         if sig is not None:
             signals.append(sig)
             logger.info(
-                f"Signal: {name} → {sig.direction} for {symbol} "
-                f"(strength={sig.technical_strength})"
+                sanitize_for_output(
+                    f"Signal: {name} -> {sig.direction} for {symbol} "
+                    f"(strength={sig.technical_strength})"
+                )
             )
 
     return signals

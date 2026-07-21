@@ -35,7 +35,7 @@ from config.settings import (
     WEIGHT_TECHNICAL_STRENGTH,
 )
 from strategy.signal_generator import generate_signals, Signal
-from utils.logger import get_logger
+from utils.logger import get_logger, sanitize_for_output
 
 logger = get_logger("backtest")
 
@@ -164,14 +164,14 @@ class BacktestResult:
         lines.append(f"Wins:                {self.wins}")
         lines.append(f"Losses:              {self.losses}")
         lines.append(f"Win Rate:            {self.win_rate:.2%}")
-        lines.append(f"Gross P&L:           ₹{self.gross_pnl:,.2f}")
-        lines.append(f"Net P&L:             ₹{self.net_pnl:,.2f}")
+        lines.append(f"Gross P&L:           Rs{self.gross_pnl:,.2f}")
+        lines.append(f"Net P&L:             Rs{self.net_pnl:,.2f}")
         lines.append(f"Profit Factor:       {self.profit_factor:.2f}")
-        lines.append(f"Max Drawdown:        ₹{self.max_drawdown:,.2f}")
+        lines.append(f"Max Drawdown:        Rs{self.max_drawdown:,.2f}")
         lines.append(f"Sharpe Ratio:        {self.sharpe_ratio:.2f}")
-        lines.append(f"Expectancy/Trade:    ₹{self.expectancy:,.2f}")
-        lines.append(f"Average Win:         ₹{self.avg_win:,.2f}")
-        lines.append(f"Average Loss:        ₹{self.avg_loss:,.2f}")
+        lines.append(f"Expectancy/Trade:    Rs{self.expectancy:,.2f}")
+        lines.append(f"Average Win:         Rs{self.avg_win:,.2f}")
+        lines.append(f"Average Loss:        Rs{self.avg_loss:,.2f}")
         lines.append("")
         lines.append("=" * 80)
         lines.append("TRADE DETAILS")
@@ -186,12 +186,12 @@ class BacktestResult:
             lines.append(f"  Strategy:      {t.strategy}")
             lines.append(f"  Entry Time:    {t.entry_time}")
             lines.append(f"  Exit Time:     {t.exit_time}")
-            lines.append(f"  Entry Price:   ₹{t.entry_price:.2f}")
-            lines.append(f"  Exit Price:    ₹{t.exit_price:.2f}")
-            lines.append(f"  Stop Loss:     ₹{t.stop_loss:.2f}")
-            lines.append(f"  Target:        ₹{t.target:.2f}")
+            lines.append(f"  Entry Price:   Rs{t.entry_price:.2f}")
+            lines.append(f"  Exit Price:    Rs{t.exit_price:.2f}")
+            lines.append(f"  Stop Loss:     Rs{t.stop_loss:.2f}")
+            lines.append(f"  Target:        Rs{t.target:.2f}")
             lines.append(f"  Quantity:      {t.quantity}")
-            lines.append(f"  P&L:           ₹{t.pnl:,.2f}")
+            lines.append(f"  P&L:           Rs{t.pnl:,.2f}")
             lines.append(f"  Result:        {t.result}")
             lines.append(f"  ML Score:      {t.ml_score:.4f}")
             lines.append(f"  Flow Score:    {t.flow_score:.4f}")
@@ -203,8 +203,8 @@ class BacktestResult:
         lines.append("END OF REPORT")
         lines.append("=" * 80)
 
-        with open(filepath, "w") as f:
-            f.write("\n".join(lines))
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write("\n".join([sanitize_for_output(line) for line in lines]))
         logger.info(f"Backtest report exported to {filepath}")
 
     def export_all(self, base_name: str = "backtest", output_dir: str = "backtest_results"):

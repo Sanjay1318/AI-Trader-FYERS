@@ -75,7 +75,15 @@ running = True
 
 # Live price cache: symbol -> {price, ts} updated on every tick
 live_price_cache: dict = {}
-LIVE_CACHE_FILE = Path("/tmp/td_live_prices.json")
+
+
+def get_live_cache_path() -> Path:
+    base_dir = Path("/tmp") if os.name != "nt" else Path("temp")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return base_dir / "td_live_prices.json"
+
+
+LIVE_CACHE_FILE = get_live_cache_path()
 
 # Watchdog: track when we last received a real tick (not a heartbeat)
 last_tick_received_time: float = time.time()

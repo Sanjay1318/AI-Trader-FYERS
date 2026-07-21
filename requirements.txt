@@ -1,6 +1,37 @@
+# # Core
+# pandas==2.1.4
+# numpy==2.0.2
+# python-dotenv>=1.0
+
+# # Database
+# sqlalchemy>=2.0
+# psycopg2-binary>=2.9
+
+# # ML
+# scikit-learn>=1.3
+# xgboost>=2.0
+# lightgbm>=4.0
+# joblib>=1.3
+
+# # Technical Analysis
+# # pandas-ta>=0.3.14  (commented out - not available)
+
+# # Broker / Data
+# kiteconnect>=5.0
+# websocket-client>=1.6
+# requests>=2.31
+
+# # News / Sentiment
+# beautifulsoup4>=4.12
+# python-dateutil>=2.8
+# torch>=2.0
+
+# # Logging / Utils
+# colorama>=0.4
+
 # Core
-pandas>=2.0
-numpy>=1.24
+pandas>=2.2
+numpy>=2.1
 python-dotenv>=1.0
 
 # Database
@@ -14,7 +45,7 @@ lightgbm>=4.0
 joblib>=1.3
 
 # Technical Analysis
-pandas-ta>=0.3.14
+# pandas-ta>=0.3.14  (requires Python 3.12+, skip for now)
 
 # Broker / Data
 kiteconnect>=5.0
@@ -27,7 +58,7 @@ requests>=2.31
 # News / Sentiment
 beautifulsoup4>=4.12
 python-dateutil>=2.8
-torch>=2.0
+torch>=2.1
 
 # Logging / Utils
 colorama>=0.4

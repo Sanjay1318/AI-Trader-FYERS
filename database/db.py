@@ -6,6 +6,15 @@ from utils.logger import logger
 engine = create_engine(DB_URL, pool_size=5, max_overflow=10, pool_pre_ping=True)
 
 
+def _safe_read_sql(query: str, params: dict = None) -> pd.DataFrame:
+    try:
+        with engine.connect() as conn:
+            return pd.read_sql(text(query), conn, params=params)
+    except Exception as exc:
+        logger.warning(f"DB read failed, returning empty frame: {exc}")
+        return pd.DataFrame()
+
+
 def get_engine():
     return engine
 
@@ -22,8 +31,7 @@ def execute_sql(sql: str, params: dict = None):
 
 
 def read_sql(query: str, params: dict = None) -> pd.DataFrame:
-    with engine.connect() as conn:
-        return pd.read_sql(text(query), conn, params=params)
+    return _safe_read_sql(query, params)
 
 
 def write_df(df: pd.DataFrame, table: str, if_exists: str = "append"):

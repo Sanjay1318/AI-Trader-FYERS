@@ -205,6 +205,14 @@ export default function LivePage() {
         </div>
 
         {/* Status bar */}
+        {state?.live_feed_message && (
+          <div className="t-panel p-3 mb-3" style={{ borderColor: state?.live_feed_available ? '#1a3a1a' : '#3f2f10', background: state?.live_feed_available ? 'rgba(0,232,123,0.05)' : 'rgba(232,195,0,0.08)' }}>
+            <p className="text-[11px]" style={{ color: state?.live_feed_available ? '#00e87b' : '#e8c300' }}>
+              {state.live_feed_message}
+            </p>
+          </div>
+        )}
+
         <div className="t-panel p-4 mb-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>

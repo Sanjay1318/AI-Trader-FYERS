@@ -67,6 +67,8 @@ state = {
     "trades_today": 0,
     "scanner_enabled": True,
     "auto_trade_enabled": True,
+    "live_feed_available": False,
+    "live_feed_message": "Live market data feed unavailable; historical/backtest features remain available.",
 }
 
 # Cooldown tracker: key=(symbol, direction, strategy) → last suggestion datetime
@@ -227,7 +229,14 @@ TRAIL_ACTIVATE_PCT = 0.10   # Start trailing once profit > 10%
 TRAIL_FACTOR = 0.50         # Trail SL at 50% of max profit
 TGT_PCT = 0.50              # Target at 50% above entry
 COMMISSION = 40.0
-LIVE_CACHE_FILE = "/tmp/td_live_prices.json"
+
+def _get_live_cache_path() -> str:
+    base_dir = Path("/tmp") if os.name != "nt" else Path("temp")
+    base_dir.mkdir(parents=True, exist_ok=True)
+    return str(base_dir / "td_live_prices.json")
+
+
+LIVE_CACHE_FILE = _get_live_cache_path()
 
 # Background processes
 _tick_monitor_thread = None
@@ -415,14 +424,25 @@ def initialize():
         state["db_connected"] = True
     except Exception as e:
         logger.error(f"DB connection failed: {e}")
+        state["db_connected"] = False
 
-    predictor.load()
+    try:
+        predictor.load()
+    except Exception as exc:
+        logger.warning(f"Model load failed: {exc}")
+
     state["models_loaded"] = predictor.is_loaded
 
-    strategy_predictor.load()
-    state["strategy_models_loaded"] = strategy_predictor.available_strategies
+    try:
+        strategy_predictor.load()
+        state["strategy_models_loaded"] = strategy_predictor.available_strategies
+    except Exception as exc:
+        logger.warning(f"Strategy model load failed: {exc}")
+        state["strategy_models_loaded"] = []
 
     state["status"] = "ready"
+    state["live_feed_available"] = False
+    state["live_feed_message"] = "Live market data feed unavailable; historical/backtest features remain available."
     _load_paper_trade_history()
     logger.info("Dashboard initialized.")
 
@@ -791,6 +811,8 @@ def scan_market():
         return
 
     state["status"] = "scanning"
+    state["live_feed_available"] = False
+    state["live_feed_message"] = "Live market data feed unavailable; using cached/historical context only."
 
     try:
         # ── Expire stale suggestions (older than cooldown window) ─────────
@@ -820,6 +842,8 @@ def scan_market():
             "ORDER BY timestamp DESC LIMIT 300"
         )
         if df.empty or len(df) < 250:
+            state["live_feed_available"] = False
+            state["live_feed_message"] = "No recent minute-candle data available yet; live feed is unavailable."
             return
 
         df = df.sort_values("timestamp").reset_index(drop=True)
@@ -853,6 +877,8 @@ def scan_market():
         except Exception as e:
             logger.debug(f"micro feature compute skipped: {e}")
         state["last_price"] = float(latest.get("close", 0))
+        state["live_feed_available"] = False
+        state["live_feed_message"] = "Live market data feed unavailable; using the latest cached candle data."
         state["last_scan"] = datetime.now().strftime("%H:%M:%S")
         state["scan_count"] += 1
 
@@ -1806,7 +1832,9 @@ def replay_page():
 
 @app.route("/api/state")
 def api_state():
-    return jsonify(state)
+    payload = dict(state)
+    payload["live_feed_available"] = bool(payload.get("live_feed_available"))
+    return jsonify(payload)
 
 
 @app.route("/api/replay/state")
@@ -2355,7 +2383,7 @@ def api_paper_positions():
     live_prices: dict = {}
 
     # 1. Try in-memory cache file written by collect_ticks.py every ~1s
-    LIVE_CACHE_FILE = "/tmp/td_live_prices.json"
+    LIVE_CACHE_FILE = _get_live_cache_path()
     cache_age = float("inf")
     try:
         mtime = os.path.getmtime(LIVE_CACHE_FILE)
@@ -2490,7 +2518,7 @@ def api_backtest_journey(risk, trade_idx):
 @app.route("/api/live/prices")
 def api_live_prices():
     """Return the latest tick prices from collect_ticks.py cache file."""
-    LIVE_CACHE_FILE = "/tmp/td_live_prices.json"
+    LIVE_CACHE_FILE = _get_live_cache_path()
     try:
         mtime = os.path.getmtime(LIVE_CACHE_FILE)
         age = time.time() - mtime
@@ -2550,6 +2578,8 @@ def api_stream():
                             "scan_count": state.get("scan_count", 0),
                             "trade_suggestions": state.get("trade_suggestions", []),
                             "auto_trade_enabled": state.get("auto_trade_enabled", True),
+                            "live_feed_available": bool(state.get("live_feed_available", False)),
+                            "live_feed_message": state.get("live_feed_message", "Live feed unavailable"),
                         },
                         "positions_by_mode": paper_positions_by_mode,
                         "tick_cache": cache,

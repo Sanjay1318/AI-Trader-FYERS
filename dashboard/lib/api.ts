@@ -60,6 +60,8 @@ export interface LiveState {
   trades_today: number;
   scanner_enabled?: boolean;
   auto_trade_enabled?: boolean;
+  live_feed_available?: boolean;
+  live_feed_message?: string;
 }
 
 export interface TradeSuggestion {
