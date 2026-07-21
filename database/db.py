@@ -61,18 +61,11 @@ def upsert_candles(df: pd.DataFrame, table: str = "minute_candles"):
 
 
 def init_db():
-    """Run the schema.sql to initialize all tables and hypertables."""
+    """Run the additive standard-PostgreSQL schema in one transaction."""
     import os
     schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
     with open(schema_path, "r") as f:
         sql = f.read()
-    with engine.connect() as conn:
-        for statement in sql.split(";"):
-            stmt = statement.strip()
-            if stmt:
-                try:
-                    conn.execute(text(stmt))
-                except Exception as e:
-                    logger.warning(f"Schema statement skipped: {e}")
-        conn.commit()
+    with engine.begin() as conn:
+        conn.exec_driver_sql(sql)
     logger.info("Database schema initialized.")

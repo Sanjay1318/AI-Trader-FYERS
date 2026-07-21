@@ -4,8 +4,6 @@
 -- Requires: CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- ============================================================================
 
-CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
-
 -- ── Symbol Master (TrueData F&O universe, refreshed daily) ───────────────────
 CREATE TABLE IF NOT EXISTS symbol_master (
     symbol          TEXT            NOT NULL,
@@ -49,8 +47,6 @@ CREATE TABLE IF NOT EXISTS tick_data (
     turnover    DOUBLE PRECISION
 );
 
-SELECT create_hypertable('tick_data', 'timestamp', if_not_exists => TRUE);
-
 CREATE INDEX IF NOT EXISTS idx_tick_symbol_ts ON tick_data (symbol, timestamp DESC);
 
 -- ── Second Candles (aggregated from ticks) ───────────────────────────────────
@@ -64,8 +60,6 @@ CREATE TABLE IF NOT EXISTS second_candles (
     volume      BIGINT          NOT NULL DEFAULT 0
 );
 
-SELECT create_hypertable('second_candles', 'timestamp', if_not_exists => TRUE);
-
 CREATE INDEX IF NOT EXISTS idx_second_symbol_ts ON second_candles (symbol, timestamp DESC);
 
 -- ── Minute Candles (primary ML training timeframe) ───────────────────────────
@@ -78,10 +72,9 @@ CREATE TABLE IF NOT EXISTS minute_candles (
     close       DOUBLE PRECISION NOT NULL,
     volume      BIGINT          NOT NULL DEFAULT 0,
     vwap        DOUBLE PRECISION,
-    oi          BIGINT          DEFAULT 0
+    oi          BIGINT          DEFAULT 0,
+    PRIMARY KEY (timestamp, symbol)
 );
-
-SELECT create_hypertable('minute_candles', 'timestamp', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS idx_minute_symbol_ts ON minute_candles (symbol, timestamp DESC);
 
@@ -96,8 +89,6 @@ CREATE TABLE IF NOT EXISTS five_minute_candles (
     volume      BIGINT          NOT NULL DEFAULT 0,
     vwap        DOUBLE PRECISION
 );
-
-SELECT create_hypertable('five_minute_candles', 'timestamp', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS idx_5min_symbol_ts ON five_minute_candles (symbol, timestamp DESC);
 
@@ -123,8 +114,6 @@ CREATE TABLE IF NOT EXISTS option_chain (
     vega            DOUBLE PRECISION
 );
 
-SELECT create_hypertable('option_chain', 'timestamp', if_not_exists => TRUE);
-
 CREATE INDEX IF NOT EXISTS idx_oc_symbol_ts ON option_chain (symbol, timestamp DESC);
 
 -- ── Macro Features (computed from 1m candles – for Macro ML Model) ───────────
@@ -149,8 +138,6 @@ CREATE TABLE IF NOT EXISTS features_macro (
     iv              DOUBLE PRECISION
 );
 
-SELECT create_hypertable('features_macro', 'timestamp', if_not_exists => TRUE);
-
 CREATE INDEX IF NOT EXISTS idx_feat_macro_ts ON features_macro (symbol, timestamp DESC);
 
 -- ── Micro Features (computed from tick/second data – for Microstructure Model)
@@ -163,8 +150,6 @@ CREATE TABLE IF NOT EXISTS features_micro (
     volume_burst    DOUBLE PRECISION,
     tick_momentum   DOUBLE PRECISION
 );
-
-SELECT create_hypertable('features_micro', 'timestamp', if_not_exists => TRUE);
 
 CREATE INDEX IF NOT EXISTS idx_feat_micro_ts ON features_micro (symbol, timestamp DESC);
 

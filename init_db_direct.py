@@ -34,17 +34,10 @@ try:
     
     print(f"[*] Executing schema from {schema_path}...")
     
-    # Split and execute statements
-    statements = sql.split(";")
-    count = 0
-    for stmt in statements:
-        stmt = stmt.strip()
-        if stmt and not stmt.startswith("--"):
-            try:
-                cursor.execute(stmt)
-                count += 1
-            except Exception as e:
-                print(f"[!] Skipped statement (already exists): {str(e)[:80]}")
+    # Execute the complete additive schema, including statements preceded by
+    # comments. psycopg2 handles the multi-statement PostgreSQL script.
+    cursor.execute(sql)
+    count = 1
     
     conn.commit()
     print(f"[✓] Schema initialized! Executed {count} statements")
