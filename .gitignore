@@ -22,6 +22,7 @@ TD_API_Documents/
 # Logs and Results
 logs/
 backtest_results/
+*.log
 
 # OS
 .DS_Store

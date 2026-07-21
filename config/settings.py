@@ -28,7 +28,25 @@ KITE_API_KEY = os.getenv("KITE_API_KEY", "")
 KITE_API_SECRET = os.getenv("KITE_API_SECRET", "")
 KITE_ACCESS_TOKEN = os.getenv("KITE_ACCESS_TOKEN", "")
 
-# ── TrueData ──────────────────────────────────────────────────────────────────
+# ── FYERS market-data provider ────────────────────────────────────────────────
+# Keep credentials only in .env.  The provider boundary lets future market-data
+# sources and prediction services consume one normalized quote shape.
+MARKET_DATA_PROVIDER = os.getenv("MARKET_DATA_PROVIDER", "fyers").strip().lower()
+FYERS_CLIENT_ID = os.getenv("FYERS_CLIENT_ID", "")
+FYERS_APP_SECRET = os.getenv("FYERS_APP_SECRET", "")
+FYERS_ACCESS_TOKEN = os.getenv("FYERS_ACCESS_TOKEN", "")
+# Stage 3 deliberately starts with the liquid index feed only. Options stay
+# on the legacy path until FYERS symbol resolution is migrated in a later stage.
+FYERS_LIVE_SYMBOLS = tuple(
+    symbol.strip()
+    for symbol in os.getenv("FYERS_LIVE_SYMBOLS", "NSE:NIFTY50-INDEX").split(",")
+    if symbol.strip()
+)
+# Existing downstream tables/APIs expect NIFTY-I; retain that provider-neutral
+# storage identity while keeping FYERS symbols at the adapter boundary.
+FYERS_STORAGE_SYMBOL_ALIASES = {"NSE:NIFTY50-INDEX": "NIFTY-I"}
+
+# ── TrueData (legacy compatibility; removal is scheduled for Stage 2+) ────────
 TRUEDATA_USER = os.getenv("TRUEDATA_USER", "")
 TRUEDATA_PASSWORD = os.getenv("TRUEDATA_PASSWORD", "")
 
@@ -147,7 +165,26 @@ WEIGHT_TECHNICAL_STRENGTH = 0.20
 STRAT_PROB_SCALE = 0.06             # normalize strat_prob raw output to [0,1] when needed
 
 # ── Broker Execution ─────────────────────────────────────────────────────────
-TRADE_MODE = os.getenv("TRADE_MODE", "paper")              # "paper" or "zerodha"
+# This migration is deliberately data-only.  Any attempt to use a live order
+# path must fail closed until an explicitly reviewed future release enables it.
+TRADE_MODE = os.getenv("TRADE_MODE", "paper").strip().lower()
+PAPER_TRADING_ONLY = os.getenv("PAPER_TRADING_ONLY", "true").strip().lower() in {"1", "true", "yes", "on"}
+ENABLE_LIVE_ORDER_EXECUTION = os.getenv("ENABLE_LIVE_ORDER_EXECUTION", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+class LiveOrderBlockedError(RuntimeError):
+    """Raised when code attempts real order execution during paper-only mode."""
+
+
+def assert_paper_trading_only() -> None:
+    """Fail closed unless the process is explicitly configured for paper mode."""
+    if not PAPER_TRADING_ONLY or ENABLE_LIVE_ORDER_EXECUTION or TRADE_MODE != "paper":
+        raise LiveOrderBlockedError(
+            "Live order execution is disabled. Set TRADE_MODE=paper, "
+            "PAPER_TRADING_ONLY=true, and ENABLE_LIVE_ORDER_EXECUTION=false."
+        )
+
+
 ORDER_CONFIRMATION = os.getenv("ORDER_CONFIRMATION", "auto")  # "auto" or "manual"
 MAX_DAILY_LOSS = float(os.getenv("MAX_DAILY_LOSS", "-5000"))
 MAX_CONCURRENT_POSITIONS = int(os.getenv("MAX_CONCURRENT_POSITIONS", "1"))

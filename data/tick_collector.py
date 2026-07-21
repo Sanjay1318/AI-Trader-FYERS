@@ -15,6 +15,7 @@ from typing import Callable, Dict, List, Optional
 import pandas as pd
 
 from database.db import write_df
+from data.market_data_provider import MarketTick
 from utils.logger import get_logger
 
 logger = get_logger("tick_collector")
@@ -55,6 +56,18 @@ class TickCollector:
         # Flush buffer when full
         if len(self._buffer) >= self._buffer_size:
             self.flush()
+
+    def on_market_tick(self, tick: MarketTick, symbol: Optional[str] = None):
+        """Accept a provider-neutral tick without leaking provider formats downstream."""
+        self.on_tick({
+            "timestamp": tick.timestamp or datetime.now(),
+            "symbol": symbol or tick.symbol,
+            "price": tick.price,
+            "volume": tick.volume or 0,
+            "bid_price": tick.bid_price,
+            "ask_price": tick.ask_price,
+            "oi": tick.open_interest,
+        })
 
     def flush(self):
         """Persist buffered ticks to the database."""

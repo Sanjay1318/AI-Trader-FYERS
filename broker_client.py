@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 import os
 from typing import Dict, List
 from datetime import datetime
+from config.settings import assert_paper_trading_only
 
 load_dotenv()
 
@@ -68,43 +69,12 @@ class BrokerClient:
             return None
     
     def place_order(self, symbol, qty, price, side, order_type='LIMIT'):
-        """Place an order"""
-        try:
-            if self.broker == 'fyers':
-                order_data = {
-                    "symbol": symbol,
-                    "qty": qty,
-                    "type": 1 if order_type == 'LIMIT' else 2,
-                    "side": 1 if side == 'BUY' else -1,
-                    "productType": "INTRADAY",
-                    "limitPrice": price,
-                    "stopPrice": 0,
-                    "disclosedQty": 0,
-                    "offlineOrder": "False",
-                    "orderTag": "AI-Trader"
-                }
-                response = self.client.place_order(order_data)
-                print(f"✅ Order placed: {response}")
-                return response
-            
-            elif self.broker == 'zerodha':
-                response = self.client.place_order(
-                    variety='regular',
-                    exchange='NFO',
-                    tradingsymbol=symbol,
-                    transaction_type='BUY' if side == 'BUY' else 'SELL',
-                    quantity=qty,
-                    order_type='LIMIT',
-                    price=price,
-                    product='MIS',
-                    tag='AI-Trader'
-                )
-                print(f"✅ Order placed: {response}")
-                return response
-        
-        except Exception as e:
-            print(f"❌ Error placing order: {e}")
-            return None
+        """Block real broker orders while the project is in paper-only mode."""
+        assert_paper_trading_only()
+        raise RuntimeError(
+            "BrokerClient cannot submit real orders during the FYERS migration. "
+            "Use the paper-trading adapter for simulated fills."
+        )
 
 # Usage Example
 if __name__ == "__main__":

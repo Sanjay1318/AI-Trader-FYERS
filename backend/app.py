@@ -39,7 +39,7 @@ from models.strategy_models import StrategyPredictor
 from backtest.option_resolver import get_nearest_expiry, get_days_to_expiry
 from config.settings import (
     WEIGHT_ML_PROBABILITY, WEIGHT_OPTIONS_FLOW, WEIGHT_TECHNICAL_STRENGTH,
-    SCORE_THRESHOLD,
+    SCORE_THRESHOLD, MARKET_DATA_PROVIDER,
 )
 from utils.logger import get_logger
 
@@ -1833,8 +1833,18 @@ def replay_page():
 @app.route("/api/state")
 def api_state():
     payload = dict(state)
+    payload["market_data_provider"] = MARKET_DATA_PROVIDER
     payload["live_feed_available"] = bool(payload.get("live_feed_available"))
     return jsonify(payload)
+
+
+@app.route("/api/market/provider")
+def api_market_provider():
+    """Provider-neutral health endpoint; it never starts streaming or trades."""
+    if MARKET_DATA_PROVIDER == "fyers":
+        from data.fyers_provider import FyersMarketDataProvider
+        return jsonify(FyersMarketDataProvider().health_check())
+    return jsonify({"provider": MARKET_DATA_PROVIDER, "legacy": True})
 
 
 @app.route("/api/replay/state")
@@ -2216,17 +2226,18 @@ def _ensure_collector():
 
     # Start collector
     project_root = Path(__file__).resolve().parent.parent
-    collector_script = project_root / "scripts" / "collect_ticks.py"
-    python_bin = project_root / ".venv" / "bin" / "python"
+    collector_name = "collect_fyers_ticks.py" if MARKET_DATA_PROVIDER == "fyers" else "collect_ticks.py"
+    collector_script = project_root / "scripts" / collector_name
+    python_bin = project_root / ".venv" / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if collector_script.exists() and python_bin.exists():
-        logger.info("Auto-starting collect_ticks.py for live tick data...")
+        logger.info(f"Auto-starting {collector_name} for live tick data...")
         _collector_process = subprocess.Popen(
             [str(python_bin), str(collector_script)],
             cwd=str(project_root),
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        logger.info(f"collect_ticks.py started (PID={_collector_process.pid})")
+        logger.info(f"{collector_name} started (PID={_collector_process.pid})")
 
 
 @app.route("/api/paper/enter", methods=["POST"])
