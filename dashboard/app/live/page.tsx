@@ -179,6 +179,9 @@ export default function LivePage() {
               <Radio className="w-3 h-3" />
               {sseConnected ? "LIVE" : "RECONNECTING..."}
             </span>
+            <span className="text-[10px] font-semibold uppercase" style={{ color: '#4da6ff' }}>
+              FEED: {state?.market_data_provider ?? "FYERS"}
+            </span>
             <span className="text-[10px]" style={{ color: '#3d4450' }}>{lastUpdate}</span>
 
             {/* Auto / Manual toggle */}

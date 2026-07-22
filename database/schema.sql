@@ -1,7 +1,7 @@
 -- ============================================================================
 -- AI Trading System – TimescaleDB Schema
 -- ============================================================================
--- Requires: CREATE EXTENSION IF NOT EXISTS timescaledb;
+-- No extensions are required; this schema runs on standard PostgreSQL.
 -- ============================================================================
 
 -- ── Symbol Master (TrueData F&O universe, refreshed daily) ───────────────────

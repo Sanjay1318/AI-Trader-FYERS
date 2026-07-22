@@ -3,10 +3,10 @@
 ## Quick Start (Paper Trading Tomorrow)
 
 ### Prerequisites
-- PostgreSQL + TimescaleDB running (`pg_isready` should show "accepting connections")
+- Standard PostgreSQL running (`pg_isready` should show "accepting connections")
 - Python virtual environment activated
 
-### Step 1: Start TimescaleDB (if not already running)
+### Step 1: Start PostgreSQL (if not already running)
 ```bash
 brew services start postgresql@17
 ```
@@ -21,7 +21,7 @@ python backend/app.py
 Open **http://localhost:5050** in your browser.
 
 The dashboard will:
-- Auto-scan every 30 seconds using data already in TimescaleDB
+- Read normalized ticks and minute candles from PostgreSQL
 - Show NIFTY price, market regime, and trade suggestions
 - Display ML probabilities and strategy scores
 
@@ -30,9 +30,9 @@ In a **second terminal**:
 ```bash
 cd /Users/aaryansinha/Dev/Projects/ai-trader
 source .venv/bin/activate
-python scripts/run_live_paper.py
+python scripts/collect_fyers_ticks.py
 ```
-This connects to TrueData and feeds live tick data into TimescaleDB.
+This connects to FYERS and feeds normalized live ticks and minute candles into PostgreSQL. It never submits an order.
 
 ---
 

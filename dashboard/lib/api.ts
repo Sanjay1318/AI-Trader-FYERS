@@ -62,6 +62,7 @@ export interface LiveState {
   auto_trade_enabled?: boolean;
   live_feed_available?: boolean;
   live_feed_message?: string;
+  market_data_provider?: string;
 }
 
 export interface TradeSuggestion {

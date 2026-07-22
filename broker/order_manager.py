@@ -33,7 +33,7 @@ from broker.base_adapter import (
     Position,
 )
 from broker.paper_adapter import PaperAdapter
-from broker.zerodha_adapter import ZerodhaAdapter
+from config.settings import assert_paper_trading_only
 from utils.logger import get_logger
 
 logger = get_logger("order_manager")
@@ -75,16 +75,16 @@ class OrderManager:
     """
 
     def __init__(self):
-        self._mode = os.getenv("TRADE_MODE", "paper").lower()
+        # Phase 1 is data collection and simulated trading only.  Never select
+        # a real-broker adapter from configuration in this runtime.
+        assert_paper_trading_only()
+        self._mode = "paper"
         self._max_daily_loss = float(os.getenv("MAX_DAILY_LOSS", "-5000"))
         self._max_concurrent = int(os.getenv("MAX_CONCURRENT_POSITIONS", "1"))
         self._confirmation_mode = os.getenv("ORDER_CONFIRMATION", "auto").lower()
 
         # Initialize the appropriate adapter
-        if self._mode == "zerodha":
-            self._adapter: BrokerAdapter = ZerodhaAdapter()
-        else:
-            self._adapter: BrokerAdapter = PaperAdapter()
+        self._adapter: BrokerAdapter = PaperAdapter()
 
         # State
         self._positions: list[ManagedPosition] = []

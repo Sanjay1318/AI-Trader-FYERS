@@ -40,10 +40,10 @@ _live_prices: dict[str, dict] = {}
 
 
 def _cache_path() -> Path:
-    """Retain the existing cache filename so current backend APIs keep working."""
+    """Shared provider-neutral cache consumed by the backend's SSE stream."""
     folder = Path("/tmp") if __import__("os").name != "nt" else Path("temp")
     folder.mkdir(parents=True, exist_ok=True)
-    return folder / "td_live_prices.json"
+    return folder / "market_live_prices.json"
 
 
 class MinuteCandleWriter:

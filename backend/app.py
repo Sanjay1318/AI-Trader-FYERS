@@ -233,7 +233,7 @@ COMMISSION = 40.0
 def _get_live_cache_path() -> str:
     base_dir = Path("/tmp") if os.name != "nt" else Path("temp")
     base_dir.mkdir(parents=True, exist_ok=True)
-    return str(base_dir / "td_live_prices.json")
+    return str(base_dir / "market_live_prices.json")
 
 
 LIVE_CACHE_FILE = _get_live_cache_path()
@@ -450,6 +450,11 @@ def initialize():
     # Runs in a background thread so the server starts immediately.
     def _startup_backfill():
         try:
+            # FYERS live ingestion owns current-session persistence. Historical
+            # option-symbol resolution remains a legacy-only capability until a
+            # provider-neutral instrument catalogue is added in Phase 2.
+            if MARKET_DATA_PROVIDER == "fyers":
+                return
             if not _is_market_hours():
                 return
             today = date.today()
@@ -639,7 +644,7 @@ def _backfill_ticks_if_stale():
     appear that fast.
     """
     global _last_tick_backfill_run
-    if not _is_market_hours():
+    if MARKET_DATA_PROVIDER == "fyers" or not _is_market_hours():
         return
     import time as _t
     now = _t.time()
@@ -718,7 +723,7 @@ def _backfill_candles_if_stale():
        This handles the case where NIFTY moves significantly after market open
        and the new ATM strike was never subscribed by the tick collector.
     """
-    if not _is_market_hours():
+    if MARKET_DATA_PROVIDER == "fyers" or not _is_market_hours():
         return
     try:
         stale = read_sql(
