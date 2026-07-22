@@ -1,6 +1,7 @@
 from fyers_apiv3 import fyersModel
 from dotenv import load_dotenv
 import os
+import re
 import webbrowser
 
 load_dotenv()
@@ -45,20 +46,26 @@ try:
 
     if response and response.get("access_token"):
         access_token = response["access_token"]
+
         print("\n✅ Access Token Generated!")
+        print(f"\nAccess Token:\n{access_token}\n")
 
         with open(".env", "r", encoding="utf-8") as file:
             content = file.read()
 
-        content = content.replace(
-            "# FYERS_ACCESS_TOKEN=generate_after_auth",
+        # Replace the existing access token line
+        content = re.sub(
+            r"^FYERS_ACCESS_TOKEN=.*$",
             f"FYERS_ACCESS_TOKEN={access_token}",
+            content,
+            flags=re.MULTILINE,
         )
 
         with open(".env", "w", encoding="utf-8") as file:
             file.write(content)
 
         print("✅ Saved to .env!")
+
     else:
         print(f"❌ FYERS token error: {response}")
 
