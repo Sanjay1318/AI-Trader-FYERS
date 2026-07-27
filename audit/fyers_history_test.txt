@@ -1,0 +1,52 @@
+=== TEST 1: Single day - 2026-07-24 ===
+Status: ok, Candles: 750
+Sample candle: [1784864700, 23666.35, 23699.95, 23646.9, 23692.5, 7882321]
+First: epoch=1784864700 dt=2026-07-24 03:45:00+00:00
+Last:  epoch=1784887140 dt=2026-07-24 09:59:00+00:00
+Candles by date: {
+  "2026-07-24": 750
+}
+Total volume: 663448985
+Non-zero volume candles: 750
+Zero volume candles: 0
+Close range: 23608.7 - 23818.3
+
+=== TEST 2: Range Jul 20-24 ===
+Candles: 2250
+Candles by date:
+  2026-07-20: 375 candles
+  2026-07-21: 375 candles
+  2026-07-22: 375 candles
+  2026-07-23: 375 candles
+  2026-07-24: 750 candles
+First: 2026-07-20 03:45:00+00:00
+Last:  2026-07-24 09:59:00+00:00
+
+=== TEST 3: 30-day range ===
+Status: ok, Candles: 7125
+Trading days: 18
+  2026-07-01: 375 candles
+  2026-07-02: 375 candles
+  2026-07-03: 375 candles
+  2026-07-06: 375 candles
+  2026-07-07: 375 candles
+  2026-07-08: 375 candles
+  2026-07-09: 375 candles
+  2026-07-10: 375 candles
+  2026-07-13: 375 candles
+  2026-07-14: 375 candles
+  2026-07-15: 375 candles
+  2026-07-16: 375 candles
+  2026-07-17: 375 candles
+  2026-07-20: 375 candles
+  2026-07-21: 375 candles
+  2026-07-22: 375 candles
+  2026-07-23: 375 candles
+  2026-07-24: 750 candles
+
+=== TEST 4: 6-month range ===
+Status: error, Candles: 0
+
+=== TEST 5: cont_flag=0 vs 1 on single day ===
+cont_flag=0: 750 candles
+cont_flag=1: 750 candles

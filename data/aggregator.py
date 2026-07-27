@@ -138,7 +138,11 @@ class AggregationEngine:
     def _build_and_store(
         self, df: pd.DataFrame, symbol: str, freq: str, table: str
     ):
-        """Resample and write to DB."""
+        """
+        Resample ticks to {freq} candles and write to {table}.
+        For 1-minute candles, auto-triggers FeatureSync → PredictionSync.
+        Collector is NEVER blocked by feature or prediction failures.
+        """
         candles = self._resample(df, freq, symbol)
         if candles.empty:
             logger.warning(f"No {freq} candles produced for {symbol}.")
@@ -155,6 +159,52 @@ class AggregationEngine:
             )
         except Exception as e:
             logger.error(f"Failed to write {freq} candles: {e}")
+            return
+
+        # Auto-trigger feature + prediction pipeline for 1-minute candles
+        if freq == "1min":
+            self._auto_sync_features(symbol, candles)
+
+    def _auto_sync_features(self, symbol: str, candles: pd.DataFrame):
+        """
+        Trigger FeaturePipeline + PredictionSync for newly written minute candles.
+        Each stage is wrapped in its own try/except so a failure in one
+        does not prevent the other from running.
+        """
+        # Step 1: FeatureSync
+        try:
+            from services.feature_sync import FeatureSyncService
+
+            fsync = FeatureSyncService()
+            n_features = fsync.sync_candle(candles, symbol=symbol)
+
+            if n_features is None or n_features == 0:
+                logger.debug(
+                    f"FeatureSync: no features stored for {symbol} "
+                    f"(indicators probably still warming up)"
+                )
+                return
+
+            logger.info(
+                f"Auto-sync: stored {n_features} feature rows for {symbol}"
+            )
+        except Exception as e:
+            logger.warning(f"FeatureSync error (non-fatal): {e}")
+            return
+
+        # Step 2: PredictionSync (only if features were stored)
+        try:
+            from services.prediction_sync import PredictionSyncService
+
+            psync = PredictionSyncService()
+            pred_id = psync.sync_latest(symbol=symbol)
+
+            if pred_id:
+                logger.info(f"Auto-sync: prediction #{pred_id} stored for {symbol}")
+            else:
+                logger.debug(f"PredictionSync: no prediction generated for {symbol}")
+        except Exception as e:
+            logger.warning(f"PredictionSync error (non-fatal): {e}")
 
     @staticmethod
     def _compute_vwap(df: pd.DataFrame) -> pd.Series:

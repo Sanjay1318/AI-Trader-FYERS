@@ -241,6 +241,7 @@ LIVE_CACHE_FILE = _get_live_cache_path()
 # Background processes
 _tick_monitor_thread = None
 _collector_process = None
+_scanner_thread = None  # tracked so diagnostics can report thread liveness
 _tick_monitor_rest_ts: dict = {}  # symbol -> last REST fallback timestamp
 
 predictor = Predictor()
@@ -288,13 +289,20 @@ HTML_TEMPLATE = """
         .pnl-negative { color: #f85149; font-weight: 600; }
     </style>
     <script>
+        function statusDot(status) {
+            if (status === 'LIVE') return '<span class="dot-green status-dot"></span>';
+            if (status === 'MARKET_CLOSED') return '<span class="dot-yellow status-dot"></span>';
+            if (status === 'NO_DATA') return '<span class="dot-red status-dot"></span>';
+            if (status === 'DEGRADED') return '<span class="dot-yellow status-dot"></span>';
+            if (status === 'CANDLES_ONLY') return '<span class="dot-yellow status-dot"></span>';
+            return '<span class="dot-yellow status-dot"></span>';
+        }
         function refreshData() {
             fetch('/api/state')
                 .then(r => r.json())
                 .then(data => {
-                    document.getElementById('status').innerHTML = data.status === 'scanning' ?
-                        '<span class="dot-green status-dot"></span>Live' :
-                        '<span class="dot-yellow status-dot"></span>' + data.status;
+                    var st = data.status || data.computed_status || 'unknown';
+                    document.getElementById('status').innerHTML = statusDot(st) + st;
                     document.getElementById('price').textContent = data.last_price ? '₹' + data.last_price.toLocaleString('en-IN', {maximumFractionDigits: 1}) : '--';
                     document.getElementById('regime').textContent = data.regime;
                     document.getElementById('regime').className = 'value ' +
@@ -415,7 +423,7 @@ HTML_TEMPLATE = """
 
 
 def initialize():
-    """Load models and verify DB connection."""
+    """Load models, ensure tables, and verify DB connection."""
     global state
     try:
         engine = get_engine()
@@ -439,6 +447,14 @@ def initialize():
     except Exception as exc:
         logger.warning(f"Strategy model load failed: {exc}")
         state["strategy_models_loaded"] = []
+
+    # Ensure prediction_history table exists
+    try:
+        from inference.prediction_store import ensure_table
+        ensure_table()
+        logger.info("prediction_history table ensured.")
+    except Exception as e:
+        logger.warning(f"Failed to ensure prediction_history table: {e}")
 
     state["status"] = "ready"
     state["live_feed_available"] = False
@@ -882,10 +898,15 @@ def scan_market():
         except Exception as e:
             logger.debug(f"micro feature compute skipped: {e}")
         state["last_price"] = float(latest.get("close", 0))
-        state["live_feed_available"] = False
-        state["live_feed_message"] = "Live market data feed unavailable; using the latest cached candle data."
+        state["live_feed_available"] = True
+        state["live_feed_message"] = f"Live market data flowing. NIFTY-I: {len(df)} candles loaded."
         state["last_scan"] = datetime.now().strftime("%H:%M:%S")
         state["scan_count"] += 1
+        logger.info(
+            f"SCAN #{state['scan_count']}: {len(df)} candles, "
+            f"last_price={state['last_price']:.1f}, "
+            f"regime computed, checking {len(signals) if signals else 0} signals..."
+        )
 
         # Regime
         regime_window = df.tail(100)[["open", "high", "low", "close", "volume"]].copy()
@@ -1837,7 +1858,102 @@ def replay_page():
 
 @app.route("/api/state")
 def api_state():
+    """Return system state with computed status.
+
+    State flow:
+      1. `initialize()` sets status = "ready"
+      2. `background_scanner()` calls `scan_market()` every 30s
+      3. `scan_market()`:
+         - If NOT market hours: immediately sets status = "idle" and returns
+         - If market hours: sets status = "scanning" briefly, then
+           the `finally` block resets it to "idle" after <1 second
+      4. The frontend shows green dot only when status == "scanning"
+
+    This means "idle" is the NORMAL resting state outside scan cycles.
+    The dashboard should compute its displayed state from data freshness
+    rather than the transient scan status.
+    """
     payload = dict(state)
+
+    # Compute derived state based on actual data freshness
+    now = datetime.now()
+
+    # Check market hours
+    market_open = _is_market_hours()
+
+    # Check if we have recent candles
+    try:
+        last_candle = read_sql(
+            "SELECT timestamp FROM minute_candles WHERE symbol = 'NIFTY-I' ORDER BY timestamp DESC LIMIT 1"
+        )
+        candle_fresh = False
+        if not last_candle.empty:
+            candle_ts = pd.to_datetime(last_candle.iloc[0]["timestamp"], utc=True)
+            age_secs = (pd.Timestamp.now(tz="UTC") - candle_ts).total_seconds()
+            candle_fresh = age_secs < 180  # fresh if < 3 minutes old
+    except Exception:
+        candle_fresh = False
+
+    # Check if we have recent ticks
+    try:
+        last_tick = read_sql(
+            "SELECT timestamp, price FROM tick_data WHERE symbol = 'NIFTY-I' ORDER BY timestamp DESC LIMIT 1"
+        )
+        tick_fresh = False
+        tick_price = 0
+        if not last_tick.empty:
+            tick_ts = pd.to_datetime(last_tick.iloc[0]["timestamp"], utc=True)
+            tick_age = (pd.Timestamp.now(tz="UTC") - tick_ts).total_seconds()
+            tick_fresh = tick_age < 120
+            tick_price = float(last_tick.iloc[0]["price"])
+    except Exception:
+        tick_fresh = False
+
+    # Check if collector process is alive via cache file
+    collector_alive = False
+    try:
+        mtime = os.path.getmtime(_get_live_cache_path())
+        collector_alive = (time.time() - mtime) < 30
+    except Exception:
+        pass
+
+    # Determine computed state
+    if not market_open:
+        computed_status = "MARKET_CLOSED"
+        computed_status_detail = "Market is closed. Scanner is idle (runs 9:15-15:30 IST)."
+    elif not candle_fresh and not tick_fresh:
+        computed_status = "NO_DATA"
+        computed_status_detail = "No recent market data received. Check collector."
+    elif tick_fresh and candle_fresh:
+        computed_status = "LIVE"
+        computed_status_detail = "Live ticks and candles flowing. Scanner active."
+    elif candle_fresh and not tick_fresh:
+        computed_status = "CANDLES_ONLY"
+        computed_status_detail = "Candles receiving but ticks stale. Collector may be stalled."
+    else:
+        computed_status = "DEGRADED"
+        computed_status_detail = "Partial data received."
+
+    # Override the legacy status field with the authoritative computed status
+    payload["status"] = computed_status
+    payload["computed_status"] = computed_status
+    payload["computed_status_detail"] = computed_status_detail
+
+    # Add diagnostic info (legacy raw_status removed — use computed_status instead)
+    payload["diagnostics"] = {
+        "market_hours": market_open,
+        "candle_fresh": candle_fresh,
+        "tick_fresh": tick_fresh,
+        "collector_alive": collector_alive,
+        "last_scan": state.get("last_scan"),
+        "scan_count": state.get("scan_count", 0),
+        "scanner_thread_alive": _scanner_thread is not None and _scanner_thread.is_alive(),
+    }
+
+    # Use tick price as last_price if available (more real-time)
+    if tick_fresh and tick_price > 0:
+        payload["last_price"] = tick_price
+
     payload["market_data_provider"] = MARKET_DATA_PROVIDER
     payload["live_feed_available"] = bool(payload.get("live_feed_available"))
     return jsonify(payload)
@@ -3267,8 +3383,9 @@ if __name__ == "__main__":
     order_manager.connect()
 
     # Start background scanner
-    scanner_thread = threading.Thread(target=background_scanner, daemon=True)
-    scanner_thread.start()
+    global _scanner_thread
+    _scanner_thread = threading.Thread(target=background_scanner, daemon=True)
+    _scanner_thread.start()
 
     # Auto-start tick monitor and data collector during market hours
     _ensure_tick_monitor()
