@@ -135,6 +135,7 @@ def main() -> None:
     candles = MinuteCandleWriter()
 
     def on_tick(market_tick) -> None:
+        print(vars(market_tick))
         canonical = FYERS_STORAGE_SYMBOL_ALIASES.get(market_tick.symbol, market_tick.symbol)
         _collector.on_market_tick(market_tick, symbol=canonical)
         tick = {

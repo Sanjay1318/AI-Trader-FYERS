@@ -167,9 +167,9 @@ def audit_volume():
 def audit_feature_quality():
     section(5, "FEATURE QUALITY STATISTICS")
 
-    cols = ['ema20','ema50','sma20','sma50','rsi','atr','adx','di_plus','di_minus',
+    cols = ['ema20','ema50','rsi','atr','adx','di_plus','di_minus',
             'macd','macd_signal','macd_hist','vwap','vwap_dist_pct',
-            'relative_volume','obv','obv_normalized']
+            'volume_sma20','relative_volume','obv','obv_normalized']
     col_list = ', '.join(cols)
 
     df = read_sql(f"""

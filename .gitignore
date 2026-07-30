@@ -1,28 +1,101 @@
-# Environment
+# =====================================================
+# Environment & Secrets
+# =====================================================
 .env
+.env.*
+*.env
 
+# =====================================================
 # Python
+# =====================================================
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
-build/
+*.py[cod]
+*$py.class
+
 .venv/
 venv/
+env/
+ENV/
 
-# ML Models (binary, regeneratable)
-*.pkl
-models/saved/
+*.egg-info/
+.eggs/
+build/
+dist/
+pip-wheel-metadata/
 
-# Market Data (TrueData compliance — do NOT upload to GitHub)
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# =====================================================
+# IDEs
+# =====================================================
+.vscode/
+.idea/
+*.code-workspace
+
+# =====================================================
+# Operating System
+# =====================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =====================================================
+# Logs
+# =====================================================
+logs/
+*.log
+
+# =====================================================
+# Runtime / Temporary Files
+# =====================================================
+temp/
+tmp/
+*.tmp
+
+# =====================================================
+# Market Data (Do NOT upload)
+# =====================================================
 data/historical/
 TD_API_Documents/
 
-# Logs and Results
-logs/
-backtest_results/
-*.log
+# Large datasets
+*.parquet
+*.feather
 
-# OS
-.DS_Store
+# =====================================================
+# Machine Learning
+# =====================================================
+models/saved/
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# =====================================================
+# Backtesting
+# =====================================================
+backtest_results/
+reports/
+
+# =====================================================
+# Jupyter
+# =====================================================
+.ipynb_checkpoints/
+
+# =====================================================
+# Node (if frontend exists)
+# =====================================================
+node_modules/
+.next/
+out/
+
+# =====================================================
+# Keep JSON configs
+# =====================================================
+!config/**/*.json
+!datasets/**/*.json

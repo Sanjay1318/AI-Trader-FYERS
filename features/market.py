@@ -12,6 +12,7 @@ Features:
   - Distance from Day High / Low
   - Time since session start
   - Session progress (0.0–1.0)
+  - Day range as percentage
 
 Timezone handling:
   Database timestamps are TIMESTAMPTZ (UTC). All Indian-market session
@@ -39,6 +40,8 @@ IST_CLOSE_END      = 930    # 15:30
 SESSION_START = IST_OPEN_START
 SESSION_END = IST_CLOSE_END
 
+SESSION_LENGTH = SESSION_END - SESSION_START  # 375 minutes
+
 
 class MarketFeatures(BaseFeatureModule):
     """Computes market context features from OHLCV data."""
@@ -60,7 +63,8 @@ class MarketFeatures(BaseFeatureModule):
             minutes = ist.dt.hour * 60 + ist.dt.minute
 
             df["minutes_since_open"] = (minutes - SESSION_START).clip(lower=0)
-            df["session_progress"] = (df["minutes_since_open"] / (SESSION_END - SESSION_START)).clip(0, 1)
+            df["session_progress"] = (df["minutes_since_open"] / SESSION_LENGTH).clip(0, 1)
+            df["day_of_week"] = ist.dt.dayofweek
 
             # ── Session Label (IST market-time buckets) ─────────────────
             #   pre_open:      09:00 <= time < 09:15  (540-554)
@@ -80,45 +84,56 @@ class MarketFeatures(BaseFeatureModule):
             ]
             labels = ["pre_open", "opening", "early", "mid", "late", "closing"]
             df["session"] = np.select(conditions, labels, default="outside_market")
-            df["day_of_week"] = ist.dt.dayofweek
             df["is_first_hour"] = (df["minutes_since_open"] <= 60).astype(int)
-            df["is_last_hour"] = (df["minutes_since_open"] >= (SESSION_END - SESSION_START - 60)).astype(int)
+            df["is_last_hour"] = (df["minutes_since_open"] >= (SESSION_LENGTH - 60)).astype(int)
 
             # ── Gap detection (use IST date for proper trading-day grouping) ─
             df["date"] = ist.dt.date
-            daily_close = df.groupby("date")["close"].transform("last")
             daily_open = df.groupby("date")["open"].transform("first")
-            prev_close = df.groupby("date")["close"].shift(1)
+
+            # FIX: Previous-day close computed from DAILY aggregation, not group-shift.
+            # Old bug: groupby("date")["close"].shift(1) shifts within the same date group,
+            # yielding NaN for every first bar of each day → gap_pct was 100% NaN.
+            daily_last_close = df.groupby("date")["close"].last()
+            prev_day_close = daily_last_close.shift(1)  # cross-day shift
+            df["_prev_day_close"] = df["date"].map(prev_day_close)
+
             is_first_bar = df.groupby("date").cumcount() == 0
             gap_pct = pd.Series(np.nan, index=df.index)
             gap_pct[is_first_bar] = (
-                (daily_open[is_first_bar] - prev_close[is_first_bar])
-                / prev_close[is_first_bar].replace(0, np.nan)
-            )
+                (daily_open[is_first_bar] - df.loc[is_first_bar, "_prev_day_close"])
+                / df.loc[is_first_bar, "_prev_day_close"].replace(0, np.nan)
+            ) * 100.0
             df["gap_pct"] = gap_pct.ffill()
             df["gap_type"] = np.select(
                 [df["gap_pct"] > 0.002, df["gap_pct"] < -0.002],
                 ["gap_up", "gap_down"],
                 default="no_gap",
             )
+            df = df.drop(columns=["_prev_day_close"])
 
             # ── Opening Range (running high/low within IST date) ────────
             date_group = df.groupby("date")
-            df["or_high"] = date_group["high"].transform(
+            df["opening_range_high"] = date_group["high"].transform(
                 lambda x: x.expanding().max()
             )
-            df["or_low"] = date_group["low"].transform(
+            df["opening_range_low"] = date_group["low"].transform(
                 lambda x: x.expanding().min()
             )
-            df["or_breakout_pct"] = (df["close"] - df["or_high"]) / df["or_high"].replace(0, np.nan)
-            df["or_breakdown_pct"] = (df["close"] - df["or_low"]) / df["or_low"].replace(0, np.nan)
+            df["opening_range_breakout_pct"] = (
+                (df["close"] - df["opening_range_high"]) / df["opening_range_high"].replace(0, np.nan)
+            )
 
             # ── Session High / Low / Range (cumulative within IST date) ──
             df["day_high"] = date_group["high"].transform("cummax")
             df["day_low"] = date_group["low"].transform("cummin")
-            df["day_range"] = df["day_high"] - df["day_low"]
-            df["dist_from_high_pct"] = (df["close"] - df["day_high"]) / df["day_high"].replace(0, np.nan)
-            df["dist_from_low_pct"] = (df["close"] - df["day_low"]) / df["day_low"].replace(0, np.nan)
+            df["day_range_pct"] = (df["day_high"] - df["day_low"]) / df["close"].replace(0, np.nan) * 100.0
+            df["dist_from_day_high_pct"] = (
+                (df["close"] - df["day_high"]) / df["day_high"].replace(0, np.nan) * 100.0
+            )
+            df["dist_from_day_low_pct"] = (
+                (df["close"] - df["day_low"]) / df["day_low"].replace(0, np.nan) * 100.0
+            )
 
             # Clean up helper columns
             df = df.drop(columns=["date"])
@@ -126,5 +141,9 @@ class MarketFeatures(BaseFeatureModule):
         else:
             logger.warning("No timestamp column — skipping session/date-based features.")
 
-        logger.info(f"MarketFeatures: added session, gap_type, or_high/low, day_high/low, dist_from_high/low_pct")
+        logger.info(
+            f"MarketFeatures: added minutes_since_open, session_progress, day_of_week, "
+            f"session, gap_pct, gap_type, opening_range_high/low, opening_range_breakout_pct, "
+            f"day_high, day_low, day_range_pct, dist_from_day_high/low_pct"
+        )
         return df

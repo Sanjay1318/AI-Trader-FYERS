@@ -886,7 +886,7 @@ def scan_market():
             tick_df = read_sql(
                 "SELECT timestamp, symbol, price, volume, bid_price, ask_price, "
                 "bid_qty, ask_qty FROM tick_data WHERE symbol = 'NIFTY-I' "
-                "AND bid_price > 0 AND ask_price > 0 "
+                # "AND bid_price > 0 AND ask_price > 0 "
                 "ORDER BY timestamp DESC LIMIT 200"
             )
             if not tick_df.empty and len(tick_df) >= 30:
@@ -905,7 +905,8 @@ def scan_market():
         logger.info(
             f"SCAN #{state['scan_count']}: {len(df)} candles, "
             f"last_price={state['last_price']:.1f}, "
-            f"regime computed, checking {len(signals) if signals else 0} signals..."
+            # f"regime computed, checking {len(signals) if signals else 0} signals..."
+            f"regime computed..."
         )
 
         # Regime
@@ -2283,37 +2284,35 @@ def _ensure_tick_monitor():
         _tick_monitor_thread = threading.Thread(target=_tick_monitor_loop, daemon=True, name="tick_monitor")
         _tick_monitor_thread.start()
 
-
 def _cache_prices_are_fresh(max_age_secs: int = 90) -> bool:
-    """
-    Return True if the tick cache is healthy.
-    Three states:
-      - File old (>30s)  → False (no collector running)
-      - File fresh, cache empty → True (collector just started, give it grace period)
-      - File fresh, cache has entries but all stale (>max_age_secs) → False (WebSocket stalled)
-      - File fresh, cache has a recent entry → True (healthy)
-    """
     try:
         mtime = os.path.getmtime(LIVE_CACHE_FILE)
+
         if time.time() - mtime >= 30:
-            return False  # file itself is old — no process writing it
-        cache = json.loads(open(LIVE_CACHE_FILE).read())
+            return False
+
+        with open(LIVE_CACHE_FILE, "r", encoding="utf-8") as f:
+            cache = json.load(f)
+
         if not cache:
-            # Empty cache + fresh file = collector just started and hasn't received ticks yet.
-            # Give it up to 120s grace period before declaring it stalled.
             return True
+
         now_ts = datetime.now()
+
         for sym_data in cache.values():
             try:
                 ts = datetime.fromisoformat(sym_data.get("ts", ""))
+
                 if (now_ts - ts).total_seconds() < max_age_secs:
                     return True
-            except Exception:
-                pass
-    except Exception:
-        pass
-    return False
 
+            except Exception as e:
+                logger.warning(f"Failed to parse cache timestamp: {e}")
+
+    except Exception as e:
+        logger.warning(f"Error checking live cache: {e}")
+
+    return False
 
 def _kill_stalled_collector():
     """Kill any running collect_ticks.py process (stalled or otherwise)."""
@@ -3372,6 +3371,7 @@ def api_broker_exit():
     price = float(body.get("price", 0))
     if not order_id:
         return jsonify({"error": "order_id required"}), 400
+
     result = order_manager.exit_position(order_id, price=price, reason="MANUAL_EXIT")
     return jsonify(result)
 
@@ -3383,7 +3383,6 @@ if __name__ == "__main__":
     order_manager.connect()
 
     # Start background scanner
-    global _scanner_thread
     _scanner_thread = threading.Thread(target=background_scanner, daemon=True)
     _scanner_thread.start()
 

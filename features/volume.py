@@ -8,6 +8,7 @@ Features (implemented):
   - Volume SMA20 (rolling average volume)
   - Relative Volume (volume / volume_sma20)
   - OBV (On-Balance Volume)
+  - log_volume (log-transformed volume for ML)
 
 Left for later milestones:
   - CMF, MFI, Volume Oscillator, Volume Spike Detection
@@ -64,9 +65,11 @@ class VolumeFeatures(BaseFeatureModule):
         df["obv"] = obv
         df["obv_normalized"] = (obv - obv_ma) / obv.rolling(window=20).std().replace(0, np.nan)
 
+        # ── Log-Transformed Volume (for ML) ──────────────────────────────────
+        df["log_volume"] = np.log1p(volume)
+
         logger.info(
             f"VolumeFeatures: added vwap, vwap_dist_pct, volume_sma20, "
-            f"relative_volume, obv, obv_normalized"
+            f"relative_volume, obv, obv_normalized, log_volume"
         )
         return df
-

@@ -29,13 +29,28 @@ logger = get_logger("dataset_builder")
 META_COLS = ['timestamp', 'symbol', 'feature_version', 'created_at']
 
 # Target numeric features for the ML model
+# Feature Set v1.0: Removed sma20/sma50 (r=0.9996 vs ema20/ema50).
+# Added return_*, body_pct, rolling_volatility, log_volume, gap_pct,
+# opening_range_breakout_pct, day_range_pct, dist_from_day_*_pct,
+# minutes_since_open, session_progress.
 NUMERIC_FEATURES = [
     'open', 'high', 'low', 'close', 'volume',
-    'ema20', 'ema50', 'sma20', 'sma50',
+    'ema20', 'ema50',
     'rsi', 'atr', 'adx', 'di_plus', 'di_minus',
     'macd', 'macd_signal', 'macd_hist',
+    'return_1m', 'return_3m', 'return_5m',
+    'high_low_pct', 'close_open_pct', 'body_pct',
+    'rolling_volatility',
     'vwap', 'vwap_dist_pct',
     'volume_sma20', 'relative_volume', 'obv', 'obv_normalized',
+    'log_volume',
+    'gap_pct',
+    'opening_range_breakout_pct',
+    'day_range_pct',
+    'dist_from_day_high_pct',
+    'dist_from_day_low_pct',
+    'minutes_since_open',
+    'session_progress',
 ]
 
 # Categorical features to one-hot encode

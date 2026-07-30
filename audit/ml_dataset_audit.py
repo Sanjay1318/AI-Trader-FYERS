@@ -5,6 +5,11 @@ Runs all 7 phases and outputs the final verdict.
 Uses TRAIN-ONLY thresholds for label generation.
 Splits the FINAL cleaned dataset (not raw pre-label rows).
 Phase 6 includes strict IST date boundary verification.
+
+FEATURE SET v1.0:
+  - sma20/sma50 removed (r=0.9996 vs ema20/ema50 — zero independent signal)
+  - Added return_1m/3m/5m, body_pct, rolling_volatility, log_volume,
+    gap_pct, day_range_pct, dist_from_day_high/low_pct, etc.
 """
 
 import sys, os
@@ -16,9 +21,14 @@ import numpy as np
 import pandas as pd
 from database.db import read_sql
 
-FEATURE_COLS = ['open','high','low','close','volume','ema20','ema50','sma20','sma50',
+FEATURE_COLS = ['open','high','low','close','volume','ema20','ema50',
     'rsi','atr','adx','di_plus','di_minus','macd','macd_signal','macd_hist',
-    'vwap','vwap_dist_pct','volume_sma20','relative_volume','obv','obv_normalized']
+    'vwap','vwap_dist_pct','volume_sma20','relative_volume','obv','obv_normalized',
+    'return_1m','return_3m','return_5m','high_low_pct','close_open_pct','body_pct',
+    'rolling_volatility','log_volume','gap_pct',
+    'opening_range_breakout_pct','day_range_pct',
+    'dist_from_day_high_pct','dist_from_day_low_pct',
+    'minutes_since_open','session_progress']
 CAT_COLS = ['regime','session']
 
 
@@ -29,26 +39,36 @@ def load_data():
 def phase1_quality(df):
     print("="*70 + "\nPHASE 1: FEATURE QUALITY AUDIT\n" + "="*70)
     constant_cols, pairs = [], []
+    nan_feature_count = 0
+    fully_nan_features = []
     print(f"{'Feature':20s} {'NonNull%':>8s} {'NaN%':>7s} {'Min':>12s} {'Max':>12s} {'Mean':>12s} {'Std':>12s}")
     print("-"*83)
-    nan_features = 0
     for col in FEATURE_COLS:
-        if col not in df.columns: continue
-        s = df[col]; valid = s.dropna()
-        if len(valid)==0:
-            nan_features += 1
+        if col not in df.columns:
+            continue
+        s = df[col]
+        valid = s.dropna()
+        nan_count = s.isna().sum()
+        total_count = len(s)
+        npct = nan_count / total_count * 100 if total_count > 0 else 100.0
+        if len(valid) == 0:
+            nan_feature_count += 1
+            fully_nan_features.append(col)
             print(f"{col:20s} {'0.00%':>8s} {'100.00%':>7s} {'NaN':>12s} {'NaN':>12s} {'NaN':>12s} {'NaN':>12s}")
             continue
-        npct = s.isna().mean()*100
         print(f"{col:20s} {100-npct:>7.2f}% {npct:>6.2f}% {valid.min():>12.4f} {valid.max():>12.4f} {valid.mean():>12.4f} {valid.std():>12.4f}")
-        if valid.nunique() == 1: constant_cols.append(col)
+        if valid.nunique() == 1:
+            constant_cols.append(col)
     print(f"\nConstant columns: {constant_cols if constant_cols else 'None'}")
+    print(f"Fully NaN features: {fully_nan_features if fully_nan_features else 'None'}")
+    print(f"  ({nan_feature_count} feature(s) are 100% NaN)")
     print("\nCategorical:")
     for col in CAT_COLS:
         if col in df.columns:
             vc = df[col].value_counts()
             print(f"  {col}:")
-            for v,c in vc.items(): print(f"    {str(v):20s}: {c:5d} ({c/len(df)*100:.1f}%)")
+            for v,c in vc.items():
+                print(f"    {str(v):20s}: {c:5d} ({c/len(df)*100:.1f}%)")
     print("\nCorrelation >0.95:")
     corr = df[[c for c in FEATURE_COLS if c in df.columns]].select_dtypes(include=[np.number]).corr()
     for i in range(len(corr.columns)):
@@ -56,8 +76,14 @@ def phase1_quality(df):
             if abs(corr.iloc[i,j]) > 0.95:
                 pairs.append((corr.columns[i], corr.columns[j], round(float(corr.iloc[i,j]),4)))
                 print(f"  {corr.columns[i]:20s} <-> {corr.columns[j]:20s}: r={corr.iloc[i,j]:.4f}")
-    if not pairs: print("  None found")
-    return {"constant": constant_cols, "correlated": pairs, "nan_count": nan_features}
+    if not pairs:
+        print("  None found")
+    return {
+        "constant": constant_cols,
+        "correlated": pairs,
+        "nan_feature_count": nan_feature_count,
+        "fully_nan_features": fully_nan_features,
+    }
 
 
 def phase2_forward_returns(df):
@@ -238,7 +264,9 @@ def phase7_final(df, p1, p2, p3, p4, p5, p6):
     Date Range:     {str(df['timestamp'].min())[:10]} -> {str(df['timestamp'].max())[:10]}
 
   Feature Audit:
-    Fully NaN Features Dropped: {p1['nan_count']}
+    Fully NaN Features (100% NaN columns): {p1['nan_feature_count']}
+      (these are entire columns where the computation failed — they are dropped
+       from the dataset before training, but listed here for diagnostic purposes)
     Constant Feats:   {p1['constant'] if p1['constant'] else 'None'}
     Correlated >0.95: {len(p1['correlated'])} pairs
 

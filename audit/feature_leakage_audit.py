@@ -58,9 +58,9 @@ def run_audit():
             f"Raw {col} from candle at timestamp T"
         ))
 
-    # EMAs/SMAs: trailing only
-    for col, span in [("ema20", 20), ("ema50", 50), ("sma20", 20), ("sma50", 50)]:
-        method = "rolling().mean()" if "sma" in col else "ewm(adjust=False).mean()"
+    # EMAs: trailing only (sma20/sma50 removed in Feature Set v1.0)
+    for col, span in [("ema20", 20), ("ema50", 50)]:
+        method = "ewm(adjust=False).mean()"
         results.append(audit_feature(
             col, "features/technical.py",
             f"close.{method}()",
@@ -226,8 +226,6 @@ def run_audit():
         ))
 
     # gap_pct: uses ffill from first-bar-of-day value.
-    # The gap IS computed at the first bar's timestamp T, then ffill'd forward.
-    # This does NOT use future data (the value was computed at time T).
     results.append(audit_feature(
         "gap_pct", "features/market.py",
         "(first_bar_open - prev_close) / prev_close, ffill'd forward",

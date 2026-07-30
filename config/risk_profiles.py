@@ -169,7 +169,7 @@ MEDIUM_RISK = RiskProfile(
     # touching rolling win rate history.
     skip_first_min=5,
     skip_last_min=15,
-    afternoon_cut=210,   # 12:45 IST — reverted; Kelly cascade negated afternoon_cut=150 gains
+    afternoon_cut=375,   # 12:45 IST — reverted; Kelly cascade negated afternoon_cut=150 gains
     max_hold_bars=40,    # was 25; TIMEOUT exits are 100% profitable — hold longer
     # News
     news_block_threshold=-0.30,
