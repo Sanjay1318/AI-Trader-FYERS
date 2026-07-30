@@ -1,105 +1,168 @@
 # 📈 AI Market Intelligence Platform
 
-An AI-powered market intelligence and paper trading platform for the Indian stock market built using **Python**, **FYERS API**, **PostgreSQL**, and a modular architecture designed for future machine learning and quantitative analysis.
+A modular AI-powered market intelligence, paper trading, and quantitative research platform for the Indian stock market.
 
-The platform provides real-time market data ingestion, historical data collection, paper trading, and a scalable foundation for AI-driven market prediction.
+Built with **Python**, **FYERS API**, **PostgreSQL**, and a scalable architecture designed for data engineering, algorithmic trading, and future machine learning models.
 
-> ⚠️ This project is currently configured for **Paper Trading Only**. Live order execution is intentionally disabled.
-
----
-
-# Features
-
-## Real-Time Market Data
-
-- Live market data using FYERS API v3
-- Real-time WebSocket streaming
-- Historical OHLCV candle retrieval
-- Provider-neutral market data abstraction
-- Automatic reconnect and re-subscription
-- Standardized quote, tick, and candle models
+> **Current Status:** Active Development (Paper Trading Mode)
 
 ---
 
-## Market Data Storage
+# 🚀 Project Vision
+
+The long-term goal is to build a complete AI-powered trading platform capable of:
+
+- 📡 Real-time market monitoring
+- 📊 Historical market data warehouse
+- 🤖 AI-assisted trade decision support
+- 📈 Strategy development & backtesting
+- 💼 Portfolio analytics
+- 📉 Risk management
+- 🧠 Machine Learning & Deep Learning models
+- ⚡ Automated paper trading
+- 🔄 Future live trading support
+
+---
+
+# ✨ Current Features
+
+## 📡 Market Data
+
+- FYERS API v3 Integration
+- Live WebSocket market streaming
+- Real-time tick collection
+- OHLCV candle support
+- Unified market data interface
+- Automatic reconnection
+
+---
+
+## 🗄 Database
 
 - PostgreSQL backend
-- Tick storage
+- Historical market storage
+- Tick persistence
 - Minute candle generation
-- Historical data persistence
-- Optimized indexes for fast retrieval
-- Standard PostgreSQL compatibility (no TimescaleDB required)
+- Optimized database schema
+- SQLAlchemy ORM integration
 
 ---
+
+## ⚙ Backend
+
+- Flask REST API
+- Provider abstraction layer
+- Live market cache
+- Health monitoring
+- Modular architecture
+- Configurable components
+
+---
+
+## 📈 Trading Engine
+
+- Paper Trading Mode
+- Strategy execution framework
+- Risk profile configuration
+- Trade signal generation
+- Extensible broker architecture
+
+---
+
+## 🧠 AI Foundation
+
+Currently under development:
+
+- Feature engineering
+- Dataset generation
+- Technical indicators
+- ML-ready data pipeline
+- Strategy evaluation framework
+
+---
+
+# 🏗 System Architecture
+
+```text
+                    FYERS API
+                        │
+        ┌───────────────┴───────────────┐
+        │                               │
+ Historical API                  WebSocket Feed
+        │                               │
+        └───────────────┬───────────────┘
+                        │
+             Market Data Provider
+                        │
+          Provider Abstraction Layer
+                        │
+               Tick Collection Engine
+                        │
+                PostgreSQL Database
+                        │
+                Feature Engineering
+                        │
+                Strategy Engine
+                        │
+              Flask REST Backend
+                        │
+ Dashboard • Analytics • AI Models
+```
+
+---
+
+# 📂 Project Structure
+
+```text
+AI-Trader/
+│
+├── audit/
+├── backend/
+├── broker/
+├── config/
+├── dashboard/
+├── database/
+├── datasets/
+├── features/
+├── models/
+├── scripts/
+├── strategies/
+├── utils/
+│
+├── requirements.txt
+├── README.md
+└── TODO.md
+```
+
+---
+
+# 🛠 Tech Stack
+
+## Languages
+
+- Python
 
 ## Backend
 
-- Flask REST API
-- Provider health monitoring
-- Live price cache
-- Configurable market data providers
-- REST endpoints for market state
-- Modular architecture for future expansion
-
----
-
-## Trading Engine
-
-- Paper Trading Only
-- Fail-safe protection against live order execution
-- Broker abstraction layer
-- Ready for future strategy execution modules
-
----
-
-## Architecture
-
-```
-                 FYERS API
-                     │
-         ┌───────────┴───────────┐
-         │                       │
-   Historical API          WebSocket Feed
-         │                       │
-         └───────────┬───────────┘
-                     │
-          Market Data Provider
-                     │
-          Provider Neutral Models
-                     │
-              Tick Collector
-                     │
-             PostgreSQL Database
-                     │
-              Flask Backend API
-                     │
-      Dashboard / Analytics / AI
-```
-
----
-
-# Tech Stack
-
-### Backend
-
-- Python
 - Flask
 - SQLAlchemy
+
+## Database
+
 - PostgreSQL
 
-### Market Data
+## Market Data
 
 - FYERS API v3
 - WebSocket Streaming
 
-### Database
-
-- PostgreSQL
-
-### Machine Learning (Planned)
+## Data Science
 
 - Pandas
 - NumPy
+
+## Machine Learning (Planned)
+
 - Scikit-Learn
 - XGBoost
 - LightGBM
@@ -108,75 +171,77 @@ The platform provides real-time market data ingestion, historical data collectio
 
 ---
 
-# Current Capabilities
+# 📅 Development Roadmap
 
-- Live market quotes
-- Live tick collection
-- Historical candle download
-- Tick persistence
-- Minute candle generation
-- Backend health monitoring
-- Paper trading safeguards
-- Modular provider architecture
-
----
-
-# Roadmap
-
-## Phase 1 ✅
+## ✅ Version 1.0 — Market Data Platform
 
 - FYERS Integration
+- PostgreSQL Database
+- Live Tick Collection
 - Provider Abstraction
-- PostgreSQL Support
-- Real-time Tick Collection
-- Historical Data Collection
 - Paper Trading Foundation
 
 ---
 
-## Phase 2 🚧
+## 🚧 Version 1.5 — Historical Data Pipeline
 
-- Dashboard Integration
-- Historical Data Visualization
+Currently Working On
+
+- Historical market downloader
+- Option data collection
+- Historical database population
+- Feature generation
+- Data validation
+
+---
+
+## 📊 Version 2.0 — Research Platform
+
+Planned
+
+- Interactive Dashboard
 - Portfolio Tracking
 - Strategy Framework
+- Performance Analytics
 - Paper Trading Dashboard
 
 ---
 
-## Phase 3
+## 🤖 Version 3.0 — AI Trading Engine
 
-Artificial Intelligence & Quantitative Analysis
+Planned
 
 - Technical Indicators
-- Feature Engineering
+- Feature Store
 - AI Signal Generation
 - Probability Forecasting
-- Strategy Evaluation
+- Explainable AI
 
 ---
 
-## Phase 4
+## 🧠 Version 4.0 — Machine Learning Platform
 
-Machine Learning Models
+Planned
 
 - XGBoost
 - LightGBM
 - Random Forest
 - LSTM
 - Transformer Models
-- Ensemble Models
+- Ensemble Learning
 
 ---
 
-## Phase 5
+## 🚀 Version 5.0 — Intelligent Trading Assistant
 
-AI Market Assistant
+Future Vision
 
-Example output:
+Example Output
 
-```
+```text
 Market Direction
+
+Bullish
 
 Probability Up: 78%
 
@@ -184,38 +249,17 @@ Probability Down: 22%
 
 Confidence: High
 
-Reasons:
+Reasoning
+
 • Strong buying pressure
-• Bullish momentum
 • Volume confirmation
-• RSI recovery
+• Trend continuation
+• Positive momentum
 ```
 
 ---
 
-# Project Structure
-
-```
-AI-Trader/
-│
-├── backend/
-├── broker/
-├── config/
-├── dashboard/
-├── data/
-├── database/
-├── models/
-├── scripts/
-├── strategies/
-├── utils/
-│
-├── requirements.txt
-└── README.md
-```
-
----
-
-# Installation
+# 📥 Installation
 
 Clone the repository
 
@@ -230,12 +274,18 @@ Create a virtual environment
 python -m venv .venv
 ```
 
-Activate it
+Activate
 
 Windows
 
 ```bash
 .venv\Scripts\activate
+```
+
+Linux / macOS
+
+```bash
+source .venv/bin/activate
 ```
 
 Install dependencies
@@ -246,14 +296,14 @@ pip install -r requirements.txt
 
 ---
 
-# Environment Variables
+# ⚙ Configuration
 
 Create a `.env` file
 
 ```env
-FYERS_CLIENT_ID=YOUR_CLIENT_ID
-FYERS_APP_SECRET=YOUR_SECRET
-FYERS_ACCESS_TOKEN=YOUR_ACCESS_TOKEN
+FYERS_CLIENT_ID=
+FYERS_APP_SECRET=
+FYERS_ACCESS_TOKEN=
 
 MARKET_DATA_PROVIDER=fyers
 
@@ -266,25 +316,21 @@ ENABLE_LIVE_ORDER_EXECUTION=false
 
 ---
 
-# Database
+# ▶ Running the Project
 
-Initialize PostgreSQL
+Initialize Database
 
 ```bash
 python init_database.py
 ```
 
----
-
-# Start Tick Collection
+Collect Market Data
 
 ```bash
 python scripts/collect_fyers_ticks.py
 ```
 
----
-
-# Run Backend
+Run Backend
 
 ```bash
 python backend/app.py
@@ -292,50 +338,53 @@ python backend/app.py
 
 ---
 
-# Safety
+# 🔒 Safety
 
-This project intentionally disables live order execution.
+This project operates in **Paper Trading Mode** by default.
 
-```
-Paper Trading Only
-```
+Live order execution is intentionally disabled to provide a safe environment for:
 
-No live broker orders can be submitted unless the protection mechanisms are explicitly removed.
-
----
-
-# Future Vision
-
-The goal of this project is to evolve into a complete **AI-powered Market Intelligence Platform** capable of:
-
-- Real-time market monitoring
-- AI-powered trend prediction
-- Strategy backtesting
-- Portfolio analytics
-- Explainable AI insights
-- Automated signal generation
-- Multi-model machine learning pipelines
+- Strategy development
+- AI experimentation
+- Backtesting
+- Feature engineering
+- Paper trading
 
 ---
 
-# Disclaimer
+# 📌 Current Development Focus
+
+The current milestone is focused on building a robust historical market data platform by implementing:
+
+- Historical data downloader
+- Option chain collection
+- Historical database population
+- Feature engineering
+- Dataset generation
+- Data quality validation
+
+This foundation will support all future AI and quantitative research modules.
+
+---
+
+# 📜 Disclaimer
 
 This software is intended for educational and research purposes only.
 
-Trading in financial markets involves substantial risk. The authors are not responsible for any financial losses resulting from the use of this software.
+Trading in financial markets carries significant risk. The authors and contributors are not responsible for any financial losses arising from the use of this software.
 
 ---
 
-# License
+# 📄 License
 
 This project is licensed under the MIT License.
 
-```
+---
 
-## 👨‍💻 Author
+# 👨‍💻 Author
 
 **Sanjay Kumar**
 
 GitHub: https://github.com/Sanjay1318
 
-Building intelligent financial systems with AI, Machine Learning, and Quantitative Analytics.
+Building AI-powered financial systems through software engineering, quantitative research, and machine learning.
